@@ -1,0 +1,19 @@
+{
+    "name": "administrator/pro",
+    "description": "Fluid trades Alert",
+    "autoload": {
+        "psr-4": {
+            "Administrator\\Pro\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Superblue",
+            "email": "139630971+devsmallant1113@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "telegram-bot/api": "^2.5",
+        "archon/dataframe": "^1.1"
+    }
+}
