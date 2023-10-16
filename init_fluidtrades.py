@@ -3,37 +3,12 @@ import numpy as np
 from datetime import datetime
 import threading
 import time
-
-# get top 200 list
-def get_top_list(api_key):
-    
-    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
-
-    parameters = {
-        'start': '1',
-        'limit': '1',
-        'sort': 'market_cap',
-        'convert': 'USD',
-    }
-    headers = {
-        'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': api_key
-    }
-
-    response = requests.get(url, headers=headers, params=parameters)
-
-    data = response.json()
-
-    if response.status_code == 200 and data['status']['error_code'] == 0:
-        return data['data']
-    else:
-        error_message = data['status']['error_message']
-        raise Exception(f"API request failed. Error: {error_message}")
+import matplotlib.pyplot as plt
     
 # get OHLC data using MEXC api
 def get_ohlc_data(symbol, timeframe):
    
-    base_url = f'https://www.mexc.com/open/api/v2/market/kline?symbol={symbol}_USDT&interval={timeframe}m&limit=50'
+    base_url = f'https://www.mexc.com/open/api/v2/market/kline?symbol={symbol}_USDT&interval={timeframe}m&limit=200'
 
     response = requests.get(base_url)
     all_data = response.json()
@@ -94,7 +69,7 @@ def detect_supply_demand_zones(time_ohlc_data):
     low_prices = np.array([entry[2] for entry in time_ohlc_data])
     close_prices = np.array([entry[3] for entry in time_ohlc_data])
 
-    atr_period = 50
+    atr_period = 10
     atr = calculate_atr(high_prices, low_prices, close_prices, atr_period)
     
     swing_length = 10
@@ -128,31 +103,55 @@ def detect_supply_demand_zones(time_ohlc_data):
                     
     return supply_zones, demand_zones
 
-# if __name__ == '__main__':
-
-def run_script():
+if __name__ == '__main__':
 
     # Fetch OHLCV data for a specific trading pair and timeframe
-    symbol = 'BTC'
-    timeframe = '5'
+    symbol = 'ETH'
+    timeframe = '15'
     time_ohlc_data = get_ohlc_data(symbol, timeframe)
 
     # Detect supply and demand zones
     supply_zones, demand_zones = detect_supply_demand_zones(time_ohlc_data)
     
     print(f"supply_zones: {supply_zones}")
+    print(f"demand_zones: {demand_zones}")
     
-    print(f"\demand_zones: {demand_zones}")
+    # Extract data for plotting
+    formatted_date = [entry[0] for entry in time_ohlc_data]
+    high_prices = [entry[1] for entry in time_ohlc_data]
+    low_prices = [entry[2] for entry in time_ohlc_data]
+    close_prices = [entry[3] for entry in time_ohlc_data]
+
+    # Create a plot for OHLC data
+    plt.figure(figsize=(12, 6))
+    plt.plot(formatted_date, high_prices, label='High')
+    plt.plot(formatted_date, low_prices, label='Low')
+    plt.plot(formatted_date, close_prices, label='Close', linestyle='--', alpha=0.7)
+    
+    # Plot supply zones
+    if supply_zones:
+        supply_dates = [entry[0] for entry in supply_zones]
+        supply_tops = [entry[1] for entry in supply_zones]
+        supply_bottoms = [entry[2] for entry in supply_zones]
+        plt.scatter(supply_dates, supply_tops, color='red', marker='^', label='Supply Zone Tops')
+        plt.scatter(supply_dates, supply_bottoms, color='green', marker='v', label='Supply Zone Bottoms')
+    
+    # Plot demand zones
+    if demand_zones:
+        demand_dates = [entry[0] for entry in demand_zones]
+        demand_tops = [entry[1] for entry in demand_zones]
+        demand_bottoms = [entry[2] for entry in demand_zones]
+        plt.scatter(demand_dates, demand_tops, color='blue', marker='^', label='Demand Zone Tops')
+        plt.scatter(demand_dates, demand_bottoms, color='orange', marker='v', label='Demand Zone Bottoms')
+
+    # Set plot labels and legend
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.title(f'OHLC and Supply/Demand Zones for {symbol} ({timeframe}-minute timeframe)')
+    plt.legend()
+    
+    # Show the plot
+    plt.grid(True)
+    plt.show()
         
-    print("\nRunning script...")
     
-def run_script_every_5_minutes():
-    run_script()
-
-    interval = 5 * 60
-    threading.Timer(interval, run_script_every_5_minutes).start()
-
-run_script_every_5_minutes()
-
-while True:
-    time.sleep(1)
